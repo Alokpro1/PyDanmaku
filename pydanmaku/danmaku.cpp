@@ -6,11 +6,6 @@
 #include "bullet.h"
 #include "renderer.h"
 
-void deleteBullets(PyObject* capsule){
-    std::list<Bullet> *bullets = (std::list<Bullet> *)PyCapsule_GetPointer(capsule, "bullet_list");
-    bullets->clear();
-}
-
 static PyObject* DanmakuGroup_init(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "O", &self)) return NULL;
     static std::list<Bullet> bullet_list;
@@ -27,6 +22,13 @@ static PyObject* DanmakuGroup_del(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+bool check_collisions(std::list<Bullet> *bullets){
+    for (std::list<Bullet>::iterator b = bullets->begin(); b != bullets->end(); b++){
+        if(b->collides(320.0, 240.0, 1.0)) return true;
+    }
+    return false;
+}
+
 static PyObject* DanmakuGroup_run(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "O", &self)) return NULL;
     PyObject* capsule = PyObject_GetAttrString(self, "bullet_list");
@@ -39,6 +41,7 @@ static PyObject* DanmakuGroup_run(PyObject *self, PyObject *args) {
             b++;
         }
     }
+    if (check_collisions(bullets)) std::cout << "Collision!" << std::endl;
     Py_RETURN_NONE;
 }
 
@@ -54,9 +57,10 @@ static PyObject* DanmakuGroup_add(PyObject *self, PyObject *args){
     double x=0.0f;
     double y=0.0f;
     int is_rect=false;
-    double height=0.0f, width=0.0f, radius=0.0f;
+    double height=0.0f, width=0.0f;
     double angle=0.0f, speed=0.0f;
     double acceleration=0.0f, angular_momentum=0.0f;
+    //TODO: make nothing optional and move the arg handling to a python file. also make this private
     if (!PyArg_ParseTuple(
         args, "Oddpd|ddddd",
         &self, &x, &y, &is_rect, &height, &width,
@@ -65,18 +69,11 @@ static PyObject* DanmakuGroup_add(PyObject *self, PyObject *args){
     )) {return NULL;}
     if(is_rect && width == 0.0f){
         width = height;
-    }else if(!is_rect){
-        radius = width;
     }
-
     PyObject* capsule = PyObject_GetAttrString(self, "bullet_list");
     std::list<Bullet> *bullets = (std::list<Bullet> *)PyCapsule_GetPointer(capsule, "bullet_list");
     static Bullet bullet;
-    if(is_rect){
-        bullet = Bullet(x, y, width, height, speed, angle, acceleration, angular_momentum);
-    } else {
-        bullet = Bullet(x, y, radius, speed, angle, acceleration, angular_momentum);
-    }
+    bullet = Bullet(x, y, (bool)is_rect, width, height, speed, angle, acceleration, angular_momentum);
     bullets->emplace_front(bullet);
     Py_RETURN_NONE;
 }

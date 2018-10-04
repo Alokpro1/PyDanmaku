@@ -3,7 +3,7 @@
 //
 
 #include <math.h>
-#define GRANULARITY 256
+#define GRANULARITY 1024
 
 bool trig_inited = false;
 double lookup_table[GRANULARITY+1];
@@ -19,6 +19,7 @@ void trig_init(){
 double l_sin(double x){
     if (!trig_inited) trig_init();
     int ind = (int)2*GRANULARITY*x/M_PI;
+    if (ind < 0) ind += 4*GRANULARITY;
     ind %= 4*GRANULARITY;
     if (ind < GRANULARITY){
         return lookup_table[ind];
